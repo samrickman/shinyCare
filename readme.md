@@ -48,6 +48,17 @@ The code in the github repository works on the NHS Digital data file as it was w
 
 The "Support Type With Populations all PSRs incl Sicilly.rds" R data file should be exactly producible by applying the code in “code to produce the RDS files from raw data.R”. This code imports “ASCFR Data with descriptions.csv”, which (following some difficulty importing a .xlsb file into R on Linux)  was created by opening the “ASCFR Data File (with descriptions).xlsb file” in LibreOffice5.1 and saving as .csv with UTF-8 encoding, comma as field delimiter and double quotes as text delimiter. The “code to produce the RDS files from raw data.R” file also uses the UK population data in the format stored in the repo, “England population density GATESHEAD NORTHUMBERLAND NEW CODES.csv”.
 
+### Files in repo:
+
+1. tabs.R - this is the R script which generates the page.
+2. include.md - this is the About page which is imported into tabs.R.
+3. Support Type With Populations all PSRs incl Sicilly.rds - this is the data as read by tabs.R.
+4. code to produce the RDS files from raw data.R - this is the code to produce the rds file from raw data.
+5. ASCFR Data with descriptions.csv - this is the NHS Digital Data .csv that is imported into the code to generate the RDS file.
+6. ASCFR Data File (with descriptions).xlsb - this is the raw NHS Digital data file. The CSV file is created by opening the XLSB file in LibreOffice5.1 and saving as .csv with UTF-8 encoding, comma as field delimiter and double quotes as text delimiter.
+7. r12ukrttablep04ukv2_tcm77-304141.xls - This is the raw 2011 population data from ONS.
+8. England population density GATESHEAD NORTHUMBERLAND NEW CODES.csv - This is the ONS data reformatted to be imported by the code to produce the RDS files. I have manually overwritten the codes for Gateshead and Northumberland which have changed since 2011. This is admittedly not ideal but was expedient!
+
 ## About
 
 This dashboard was created by Sam Rickman using R version 3.2.3 (2015-12-10) on an x86, 64 bit linux-gnu PC. 
