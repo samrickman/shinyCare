@@ -17,6 +17,7 @@ library(dplyr)
 library(scales)
 library(reshape2)
 library(tidyr)
+library(rmarkdown)
 
 
 
@@ -27,7 +28,7 @@ spendPerPersonData <- read_rds("Support Type With Populations all PSRs incl Sici
 primarySupportReasons <- unique(spendPerPersonData$PrimarySupportReason_Key)
 
 # Set the options for the x-axis and facet values
-facetChoices <- xAxisChoices <- c("Support Setting" = "supportOrCareType", "Region" = "GEOGRAPHY_NAME", "Primary Support Reason" = "PrimarySupportReason_Key", "Care Type (short/long term)" = "CareType_Key")
+facetChoices <- xAxisChoices <- c("Support Setting" = "supportOrCareType", "Region" = "GEOGRAPHY_NAME", "Primary Support Reason" = "PrimarySupportReason_Key", "Care Type (short/long term)" = "CareType_Key", "Age Band" = "AgeBand_Key")
 # Set the options for the colour values
 colValues <- c("Age Band", "Support Setting", "Primary Support Reason", "Region", "Care Type (short/long term)")
 
@@ -35,7 +36,7 @@ ui <- fluidPage(
         
         title = "Adult Social Care Spending Data 2017/18",
         
-        titlePanel("ShinyCare - A Dashboard for the Adult Social Care Finance Report 2017/18 (England)"), 
+        titlePanel("Dashboard for Adult Social Care Finance Report 2017/18 (England)"), 
         
         # Sidebar layout with input and output definitions ----
         sidebarLayout(
@@ -53,7 +54,7 @@ ui <- fluidPage(
                         selectInput(inputId = "colorValue", label = "Choose colour", choices = colValues),
                         
                         # Select plot type
-                        selectInput(inputId = "plotType", label = "Plot type", choices = c("Total spending (bar graph)" = "bar", "Spending per person (each point is a local authority)" = "scatter") )  ,
+                        selectInput(inputId = "plotType", label = "Plot type", choices = c("Total spending (bar graph)" = "bar", "Spending per person (each point is a local authority)" = "scatter"), selected = "scatter" )  ,
                 
                         # Filter by primary support reason
                         checkboxGroupInput(inputId = "PrimarySupportReason",
@@ -129,10 +130,11 @@ server <- function(input, output) {
                 filteredDataByPSR <- filter(relevantData, PrimarySupportReason_Key %in% input$PrimarySupportReason)        
                 
                 
-                # Function to tell it what type of plot to make
+                # Define function to tell it what type of plot to make - this is called
+                # in the plot building function
                 plotGeom <- function(geomType = input$plotType) {
                         if(geomType=="scatter"){
-                                geom_point(position=position_jitter(h=0.2,w=0.2), alpha=0.7)
+                                geom_point(position=position_jitter(h=0.35,w=0.35), alpha=0.7)
                         }
                         else {
                                 geom_col()
@@ -155,14 +157,25 @@ server <- function(input, output) {
                         else if(input$xAxisChoice=="GEOGRAPHY_NAME"){xAxisLabel = "Region"} 
                         else if(input$xAxisChoice=="PrimarySupportReason_Key"){xAxisLabel = "Primary Support Reason"}
                         else if(input$xAxisChoice=="CareType_Key"){xAxisLabel = "Care Type"}
+                        else if(input$xAxisChoice=="AgeBand_Key"){xAxisLabel = "Age Band"}
+                        
+                        # Set the plot title - with the total spending figure if a bar chart
+                        # Otherwise just a plain title
+                        if(input$plotType=="bar"){
+                                plotTitle <- paste("Total spending across selected primary support groups:", dollar(sum(filteredDataByPSR$ITEMVALUE), prefix = "£"))
+                        }
+                        else{
+                                plotTitle <- "Average spending per member of population (each point represents one local authority value)"
+                        }
+                                
                         
                         # This is where we tell it to build the plot with the y axis set in the line above
-                        # with the enexpr() phase - note the !!yAxis, means take it out of quotes
+                        # with the enexpr() phase - note the !!yAxis, means take the evaluated expression
                         variablePlot <- ggplot(data=filteredDataByPSR) + 
                                 aes(x= !!xAxis, y = !!yAxis, color=!!colField, fill=!!colField) +
                                 plotGeom() +
                                 facet_grid(rows=facetVal) +
-                                ggtitle(paste("Total spending across selected primary support groups:", dollar(sum(filteredDataByPSR$ITEMVALUE), prefix = "£")  )   ) +
+                                ggtitle(plotTitle) +
                                 ylab("Spending (£)") +
                                 xlab(xAxisLabel)
                         
@@ -202,7 +215,12 @@ server <- function(input, output) {
                                                                 xval=PrimarySupportReason_Key
                                                         }
                                                         else {
-                                                                xval=GEOGRAPHY_NAME        
+                                                                if(input$xAxisChoice=="AgeBand_Key") {
+                                                                        xval=AgeBand_Key
+                                                                }
+                                                                else {
+                                                                        xval=GEOGRAPHY_NAME        
+                                                                }        
                                                         }
                                                         
                                                 }         
