@@ -35,16 +35,12 @@ Table: Select “sum” as the summary statistic.
 
 In the table. the 17.9bn figure is the total of all the values in the table and is shown on the bottom-right. Data in this table can be exported with the button below the table.
 
-## How is spending per person calculated?
+## How is spending per 100k population calculated?
 
-England local authorities have populations which differ from 2000 people (Isles of Sicilly) to 1.5m people (Essex).
+I divided the total spending by the last known population estimates per local authority [ONS 2011 census data](
+https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/2011censuspopulationestimatesbyfiveyearagebandsandhouseholdestimatesforlocalauthoritiesintheunitedkingdom/r12ukrttablep04ukv2_tcm77-304141.xls) to create a (very rough) spending per person estimate, which was then multiplied by 100,000.
 
-This makes comparing total spending across local authorities misleading.
-
-To remedy this, I divided the total spending by the last known population estimates per local authority [ONS 2011 census data](
-https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/2011censuspopulationestimatesbyfiveyearagebandsandhouseholdestimatesforlocalauthoritiesintheunitedkingdom/r12ukrttablep04ukv2_tcm77-304141.xls) to create a (very rough) spending per person estimate.
-
-Each point on the plot represents one local authority.
+Each point on the plot represents one local authority entry.
 
 ## Note on reproducibility 
 
