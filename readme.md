@@ -7,7 +7,7 @@ This is the repo for the [Adult Social Care Finance Report Dashboard](https://sa
 
 ## What data is used?
 
-Since 2017, NHS Digital have released an [Adult Social Care Activity and Finance Report]("https://digital.nhs.uk/data-and-information/publications/statistical/adult-social-care-activity-and-finance-report/2017-18"), "Adult Social Care Activity and Finance Report 2017-18".
+Since 2017, NHS Digital have released an [Adult Social Care Activity and Finance Report](https://digital.nhs.uk/data-and-information/publications/statistical/adult-social-care-activity-and-finance-report/2017-18),.
 
 NHS Digital state that the Gross Current Expenditure on Adult Social Care for local authorities in England is £17.9bn. 
 
