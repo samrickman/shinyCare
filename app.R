@@ -22,7 +22,7 @@ library(rmarkdown)
 
 
 # Load the data per person - also contains the council data
-spendPerPersonData <- read_rds("Support Type With Populations all PSRs incl Sicilly.rds")
+spendPerPersonData <- read_rds("Support Type With Populations with per100k.rds")
 
 # Set the options for the primary support reason checkboxes
 primarySupportReasons <- unique(spendPerPersonData$PrimarySupportReason_Key)
@@ -50,15 +50,15 @@ ui <- fluidPage(
                         # Select the facets
                         selectInput(inputId = "facetValue", label = "Choose panels (or vertical for table)", choices = facetChoices, selected = "PrimarySupportReason_Key"),
                         
-                        # Select colours
-                        selectInput(inputId = "colorValue", label = "Choose colour", choices = colValues),
-                        
                         # Select plot type
-                        selectInput(inputId = "plotType", label = "Plot type", choices = c("Total spending (bar graph)" = "bar", "Spending per person (each point is a local authority)" = "scatter"), selected = "scatter" )  ,
-                
+                        selectInput(inputId = "plotType", label = "Plot/Table type", choices = c("Total spending (bar graph)" = "bar", "Spending per 100k population (each point is a local authority)" = "scatter"), selected = "scatter" )  ,
+
+                        # Select colours
+                        selectInput(inputId = "colorValue", label = "Choose colour variable", choices = colValues),
+                        
                         # Filter by primary support reason
                         checkboxGroupInput(inputId = "PrimarySupportReason",
-                                           label = "Filter graph by Primary Support Reason",
+                                           label = "Filter plot by Primary Support Reason",
                                            choices = primarySupportReasons,
                                            selected = primarySupportReasons[1:5][-4]),
                         
@@ -88,9 +88,16 @@ ui <- fluidPage(
                                     
                                     # Table
                                     tabPanel("Table", 
-                                             selectInput(inputId = "aggregateFormula", label = "Choose summary statistic for table", choices = c("mean", "median", "sum"), selected = "mean"),
+                                             titlePanel(textOutput(outputId = "tableNote")),
+                                             fluidRow(
+                                                     # column(12, offset = 0, textOutput(outputId = "tableNote")),
+                                                column(3, selectInput(inputId = "aggregateFormula", label = "Choose summary statistic for table", choices = c("mean", "median", "sum"), selected = "mean")),
+                                                column(9, offset = 0, textOutput(outputId = "suppNote")),   
                                              tableOutput(outputId = "summaryTable"),
-                                             downloadButton(outputId = "downloadSummaryTable", label = "Download summary table")),
+                                             
+                                             downloadButton(outputId = "downloadSummaryTable", label = "Download summary table")
+                                             )
+                                             ),
                                     # About
                                     tabPanel("About", uiOutput(outputId = "outputUI"))
                                     
@@ -142,7 +149,7 @@ server <- function(input, output) {
                 }
                 
                 # Define the function to actually build the plot - arguments are yvalue, xvalue and color
-                buildVariablePlot <- function(yval=SpendingPerPerson, xval=supportOrCareType, colval = AgeBand_Key, facetVal ="PrimarySupportReason_Key") {
+                buildVariablePlot <- function(yval=SpendingPer100k, xval=supportOrCareType, colval = AgeBand_Key, facetVal ="PrimarySupportReason_Key") {
                         
                         # This is the bit that takes the variable name from the argument and makes it understandable
                         # so that it can go in the y axis, xaxis and color value. Note not necessary with facevetVal as it's in quotes.
@@ -165,7 +172,7 @@ server <- function(input, output) {
                                 plotTitle <- paste("Total spending across selected primary support groups:", dollar(sum(filteredDataByPSR$ITEMVALUE), prefix = "£"))
                         }
                         else{
-                                plotTitle <- "Average spending per member of population (each point represents one local authority value)"
+                                plotTitle <- "Average spending per 100,000 population (each point represents one local authority value)"
                         }
                                 
                         
@@ -195,7 +202,7 @@ server <- function(input, output) {
                 # where the argument to be passed is in quotes. 
                 buildVariablePlot({
                         if(input$plotType=="scatter") {
-                                yval=SpendingPerPerson
+                                yval=SpendingPer100k
                         } 
                         else { 
                                 yval=ITEMVALUE
@@ -275,10 +282,22 @@ server <- function(input, output) {
                 # Define the function that will take the arguments
                 buildTable <- function(vertical = "PrimarySupportReason_Key", horizontal = "supportOrCareType", formula = "mean") {
                         
+                        
+                        # Tell the table whether we are looking at the total or aggregate data
+                        # 
+                        if(input$plotType=="scatter"){
+                                relevantVal <- "SpendingPer100k"
+                        }
+                        else {
+                                relevantVal <- "ITEMVALUE"
+                                
+                        }
+                        
+                                
                         # Use the correct summary formula
                         if(formula=="mean"){
                                 # Calculate means
-                                summaryTable <-  (dcast(spendPerPersonData, as.formula(paste(vertical, horizontal, sep="~")), value.var = "ITEMVALUE", mean, na.rm=TRUE))
+                                summaryTable <-  (dcast(spendPerPersonData, as.formula(paste(vertical, horizontal, sep="~")), value.var = relevantVal, mean, na.rm=TRUE))
                                 
                                 # Add row means
                                 summaryTable[["RowMeans"]] <- rowMeans(summaryTable[-1], na.rm = TRUE)
@@ -299,29 +318,34 @@ server <- function(input, output) {
                         }
                         else if(formula=="median"){
                                 # Calculate median
-                                summaryTable <-  (dcast(spendPerPersonData, as.formula(paste(vertical, horizontal, sep="~")), value.var = "ITEMVALUE", median, na.rm=TRUE))
+                                summaryTable <-  (dcast(spendPerPersonData, as.formula(paste(vertical, horizontal, sep="~")), value.var = relevantVal, median, na.rm=TRUE))
+                                
+                                # A problem with calculating the row and column medians so I have taken it out for now -
+                                # Not sure how useful it is anyway
                                 
                                 # Add row median
-                                summaryTable[["RowMedians"]] <- apply(summaryTable[-1], 1, median, na.rm = TRUE)
+                                # summaryTable[["RowMedians"]] <- apply(summaryTable[-1], 1, median, na.rm = TRUE)
                                 
                                 # Arrange descending
-                                summaryTable <- arrange(summaryTable, desc(RowMedians))
+                                # summaryTable <- arrange(summaryTable, desc(RowMedians))
                                 
                                 # Add column median
                                 
-                                sumMedians <- as.data.frame(lapply(summaryTable[-1], median, na.rm = TRUE))
-                                cellName <- "Column medians"
+                                #sumMedians <- as.data.frame(lapply(summaryTable[-1], median, na.rm = TRUE))
+                                #cellName <- "Column medians"
                                 
-                                sumAdd <- cbind(cellName, sumMedians)
-                                names(sumAdd) <- names(summaryTable)
+                                #sumAdd <- cbind(cellName, sumMedians)
+                                #names(sumAdd) <- names(summaryTable)
                                 
-                                summaryTable <- rbind(summaryTable, sumAdd)
+                                #summaryTable <- rbind(summaryTable, sumAdd)
+                                
+                                summaryTable
                                 
                         }
                         else { # This is for a straight sum
                                 
                                 # Calculate sum 
-                                summaryTable <-  (dcast(spendPerPersonData, as.formula(paste(vertical, horizontal, sep="~")), value.var = "ITEMVALUE", sum, na.rm=TRUE))
+                                summaryTable <-  (dcast(spendPerPersonData, as.formula(paste(vertical, horizontal, sep="~")), value.var = relevantVal, sum, na.rm=TRUE))
                                 
                                 # Add row sums
                                 summaryTable[["RowSums"]] <- rowSums(summaryTable[-1], na.rm = TRUE)
@@ -412,12 +436,54 @@ server <- function(input, output) {
                             p("For further information, including links to the code used to generate this dashboard, see the About section."),
                             br(),
                             h4("A note on the population data:"),
-                            p("Note: The spending per person data divides the total spend by the 2011 census population figures. Isles of Scilly and City of London have been removed from this data as both have very small populations leading to very high outliers. The City of London and Isles of Scilly data is included in the total spending both in the bar graph and the Table tab.")
+                            p("Note: The spending per 100k population data is calculated from the 2011 census population figures. Isles of Scilly and City of London have been removed from this data as both have very small populations leading to very high outliers. The City of London and Isles of Scilly data is included in the total spending both in the bar graph and the Table tab.")
                         )
 
+                
+                
                 })
         })
         
+        # Table Note
+        tableNoteOutput <- reactive({
+                
+                # Tell the user whether we are looking at the total or aggregate data
+                if(input$plotType=="scatter"){
+                        relevantData <- "Spending Per 100,000 population."
+                }
+                else {
+                        relevantData <- "Total spending per local authority."
+                        
+                }
+                
+                # This table is calculated 
+                tableText <- paste("Table source data:", relevantData)
+                
+                
+                              
+                
+        })
+        
+        
+        output$suppNote <- renderText("Note: To change table source change Plot/Table type. Only selected Primary Support Reasons are broken down by support setting, so filtering by PSR by Support Setting will produce some NAs. Tables can be exported as CSV by clicking the download button beneath the table."                         )
+        
+        output$tableNote <- renderText({
+                
+                
+                                tableNoteOutput()
+                        
+                        
+                        
+                        
+                
+                
+                
+                
+                
+                
+        })        
+        
+                
         # About section 
         output$outputUI <- renderUI({ 
                         

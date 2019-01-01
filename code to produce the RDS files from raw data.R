@@ -73,3 +73,14 @@ grossCurrentExpenditureWithPop <- filter(grossCurrentExpenditureWithPop, REGION_
 
 # write newSupportTable out just in case I want to start from here later
 write_rds(grossCurrentExpenditureWithPop, "Support Type With Populations all PSRs excl Sicilly.rds")
+
+# Read it back in because now I want to be spending per 100k population
+spendPerPersonData <- read_rds("Support Type With Populations all PSRs incl Sicilly.rds")
+
+
+# 1 Jan 2018 - changed it to per 100k rather than per person
+
+spendPerPersonData$SpendingPer100k <- spendPerPersonData$SpendingPerPerson*1e5
+
+write_rds(spendPerPersonData, "Support Type With Populations with per100k.rds")
+

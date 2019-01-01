@@ -12,9 +12,13 @@ I decided to create a dashboard filter the data by different variables, both in 
 
 The first thing I would recommend is to play around with the drop-down menus and see what changes!
 
-The first two drop-down menus change both the graph and the table. The x-axis drop down menu sets the x-axis in the graph and the horizontal part of the table. The panels menu changes the panels of the graph and the vertical part of the table.
+The first three drop-down menus change both the graph and the table:
 
-The colour and plot type drop-down menus apply only to the graph, as do the checkboxes to filter by Primary Support Reason.
+1. The x-axis drop down menu sets the x-axis in the graph and the horizontal part of the table. 
+2. The panels menu changes the panels of the graph and the vertical part of the table.
+3. The plot/table type selects whether the plot or table displays spending per 100,000 population or total spending.
+
+The colour variable applies only to the graph, as do the checkboxes to filter by Primary Support Reason.
 
 The full data set can be downloaded using the button in the side bar. Summary data can be downloaded using the button in the summary table tab.
 
@@ -28,16 +32,16 @@ Table: Select “sum” as the summary statistic.
 
 In the table. the 17.9bn figure is the total of all the values in the table and is shown on the bottom-right. Data in this table can be exported with the button below the table.
 
-## How is spending per person calculated?
+## How is spending per 100k calculated?
 
-England local authorities have populations which differ from 2000 people (Isles of Sicilly) to 1.5m people (Essex).
+England local authorities have populations which differ from 2000 people (Isles of Sicilly) to 1.5m people (Essex) which makes comparisons on the basis of total spending difficult.
 
-This makes comparing total spending across local authorities misleading.
+I divided the total spending by the last known population estimates per local authority [ONS 2011 census data](
+https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/2011censuspopulationestimatesbyfiveyearagebandsandhouseholdestimatesforlocalauthoritiesintheunitedkingdom/r12ukrttablep04ukv2_tcm77-304141.xls) to create a spending per 100k population estimate.
 
-To remedy this, I divided the total spending by the last known population estimates per local authority [ONS 2011 census data](
-https://www.ons.gov.uk/file?uri=/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/2011censuspopulationestimatesbyfiveyearagebandsandhouseholdestimatesforlocalauthoritiesintheunitedkingdom/r12ukrttablep04ukv2_tcm77-304141.xls) to create a (very rough) spending per person estimate.
+I have since discovered that ONS produces a yearly estimate for UK population by local authority so I may update it with more recent population figures at some point. 
 
-Each point on the plot represents one local authority.
+Each point on the plot represents one local authority Gross Current Expenditure entry.
 
 ## Note on reproducibility 
 
