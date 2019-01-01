@@ -1,7 +1,11 @@
 Readme for Adult Social Care Dashboard
 ======================================================
 
-## What is this?
+## What is this repo?
+
+This is the repo for the [Adult Social Care Finance Report Dashboard](https://samrickman.shinyapps.io/ascfr_dashboard/).
+
+## What data is used?
 
 Since 2017, NHS Digital have released an [Adult Social Care Activity and Finance Report]("https://digital.nhs.uk/data-and-information/publications/statistical/adult-social-care-activity-and-finance-report/2017-18"), "Adult Social Care Activity and Finance Report 2017-18".
 
@@ -50,7 +54,7 @@ The "Support Type With Populations all PSRs incl Sicilly.rds" R data file should
 
 ### Files in repo:
 
-1. tabs.R - this is the R script which generates the page.
+1. app.R - this is the R script which generates the page.
 2. include.md - this is the About page which is imported into tabs.R.
 3. Support Type With Populations all PSRs incl Sicilly.rds - this is the data as read by tabs.R.
 4. code to produce the RDS files from raw data.R - this is the code to produce the rds file from raw data.
