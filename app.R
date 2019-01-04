@@ -1,15 +1,7 @@
-## OK this will be an attempt to look at the ASCFR data with the Shiny app
+## This is my first proper attempt to look at the ASCFR data with the Shiny app
+# If you are reading this, then any constructive feedback is much appreciated!
 
-## OK essentially next time read this:
-# https://shiny.rstudio.com/articles/reactivity-overview.html
-# It's about not using if/else statements and instead using reactive values
-# which will make things easier to add - as currently if/else only works
-# if you do one else, otherwise it only prints final value
-
-
-
-#setwd("./shinyCare")
-
+# Load libraries
 library(shiny)
 library(ggplot2)
 library(readr)
@@ -20,18 +12,17 @@ library(tidyr)
 library(rmarkdown)
 
 
-
 # Load the data per person - also contains the council data
 spendPerPersonData <- read_rds("Support Type With Populations with per100k.rds")
 
 # Set the options for the primary support reason checkboxes
 primarySupportReasons <- unique(spendPerPersonData$PrimarySupportReason_Key)
 
-# Set the options for the x-axis and facet values
-facetChoices <- xAxisChoices <- c("Support Setting" = "supportOrCareType", "Region" = "GEOGRAPHY_NAME", "Primary Support Reason" = "PrimarySupportReason_Key", "Care Type (short/long term)" = "CareType_Key", "Age Band" = "AgeBand_Key")
-# Set the options for the colour values
-colValues <- c("Age Band", "Support Setting", "Primary Support Reason", "Region", "Care Type (short/long term)")
+# Set the options for the x-axis, facet values and color values
+facetChoices <- xAxisChoices <- colValues <-  c("Support Setting" = "supportOrCareType", "Region" = "GEOGRAPHY_NAME", "Primary Support Reason" = "PrimarySupportReason_Key", "Care Type (short/long term)" = "CareType_Key", "Age Band" = "AgeBand_Key")
 
+
+# Set out UI
 ui <- fluidPage(
         
         title = "Adult Social Care Spending Data 2017/18",
@@ -54,7 +45,7 @@ ui <- fluidPage(
                         selectInput(inputId = "plotType", label = "Plot/Table type", choices = c("Total spending (bar graph)" = "bar", "Spending per 100k population (each point is a local authority)" = "scatter"), selected = "scatter" )  ,
 
                         # Select colours
-                        selectInput(inputId = "colorValue", label = "Choose colour variable", choices = colValues),
+                        selectInput(inputId = "colorValue", label = "Choose colour variable", choices = colValues, selected = "AgeBand_Key"),
                         
                         # Filter by primary support reason
                         checkboxGroupInput(inputId = "PrimarySupportReason",
@@ -114,28 +105,42 @@ ui <- fluidPage(
 
 server <- function(input, output) {
         
-        # This is the workhorse bit which takes all the inputs, selects the right data,
-        # filters the data, and draws the output
+        # This is the reactive statement contains all the functions which are used to build the plot
+        # from the variables set by the user:
+        # It contains the following functions:
+        # 1. selectData - selects the correct data
+        # 2. plotGeom - selects whether it is a bar or a scatter plot
+        # 3. buildVariablePlot - builds plot from user variables and above 2 functions
+        
         plotToRender <- reactive( { 
                 
-                # Remove the outliers from the spendPerPerson data if you are going to be looking at it
-                # on a per person level (they squash the rest of the graph)
-                if(input$plotType=="scatter"){
-                        # Take out the extremely high values
-                        relevantData <- filter(spendPerPersonData, DH_GEOGRAPHY_NAME != "City of London", DH_GEOGRAPHY_NAME != "Isles of Scilly")
-                        # Take out the 143 (out of 15k) < 0 values which must be errors
-                        relevantData <- filter(relevantData, SpendingPerPerson>=0)
+                # Define the function to actually select the data for the plot
+                selectData <- function(plotType){
                         
-                }
-                else {
-                        relevantData <- spendPerPersonData
+                        # Remove the outliers from the spendPerPerson data if you are going to be looking at it
+                        # on a per person level (they squash the rest of the graph)
+                        if(plotType=="scatter"){
+                                # Take out the extremely high values
+                                relevantData <- filter(spendPerPersonData, DH_GEOGRAPHY_NAME != "City of London", DH_GEOGRAPHY_NAME != "Isles of Scilly")
+                                # Take out the 143 (out of 15k) < 0 values which must be errors
+                                relevantData <- filter(relevantData, SpendingPerPerson>=0)
+                                
+                        }
+                        else {
+                                relevantData <- spendPerPersonData
+                                
+                                
+                        }
+                        
+                        # Filter the data on the relevant primary support reasons
+                        filteredDataByPSR <- filter(relevantData, PrimarySupportReason_Key %in% input$PrimarySupportReason)        
+                        
                         
                         
                 }
                 
-                # Filter the data on the relevant primary support reasons
-                filteredDataByPSR <- filter(relevantData, PrimarySupportReason_Key %in% input$PrimarySupportReason)        
-                
+                # Use the above function to create the appropriate data for the plot                
+                plotData <- selectData(input$plotType)
                 
                 # Define function to tell it what type of plot to make - this is called
                 # in the plot building function
@@ -148,14 +153,10 @@ server <- function(input, output) {
                         }
                 }
                 
-                # Define the function to actually build the plot - arguments are yvalue, xvalue and color
-                buildVariablePlot <- function(yval=SpendingPer100k, xval=supportOrCareType, colval = AgeBand_Key, facetVal ="PrimarySupportReason_Key") {
-                        
-                        # This is the bit that takes the variable name from the argument and makes it understandable
-                        # so that it can go in the y axis, xaxis and color value. Note not necessary with facevetVal as it's in quotes.
-                        yAxis <- enexpr(yval)
-                        xAxis <- enexpr(xval)
-                        colField <- enexpr(colval)
+                
+                
+                # Define the function to actually build the plot - arguments are yvalue, xvalue, color and facet value
+                buildVariablePlot <- function(yval, xval, colval , facetVal) {
                         
                         # Set the x-axis label value
                         
@@ -169,24 +170,25 @@ server <- function(input, output) {
                         # Set the plot title - with the total spending figure if a bar chart
                         # Otherwise just a plain title
                         if(input$plotType=="bar"){
-                                plotTitle <- paste("Total spending across selected primary support groups:", dollar(sum(filteredDataByPSR$ITEMVALUE), prefix = "£"))
+                                plotTitle <- paste("Total spending across selected primary support groups:", dollar(sum(plotData$ITEMVALUE), prefix = "£"))
                         }
                         else{
                                 plotTitle <- "Average spending per 100,000 population (each point represents one local authority value)"
                         }
                                 
                         
-                        # This is where we tell it to build the plot with the y axis set in the line above
-                        # with the enexpr() phase - note the !!yAxis, means take the evaluated expression
-                        variablePlot <- ggplot(data=filteredDataByPSR) + 
-                                aes(x= !!xAxis, y = !!yAxis, color=!!colField, fill=!!colField) +
+                        # This is where we tell it to build the plot
+                        
+                        # This is the plot itself
+                        variablePlot <- ggplot(data=plotData) + 
+                                aes_string(x= xval, y = yval, color=colval, fill=colval) +
                                 plotGeom() +
                                 facet_grid(rows=facetVal) +
                                 ggtitle(plotTitle) +
                                 ylab("Spending (£)") +
                                 xlab(xAxisLabel)
                         
-                        
+                        # A little bit of prettifying labels and titles
                         variablePlot + theme(axis.text.x = element_text(angle = 90, hjust=1),  plot.title = element_text(hjust = 0.5), 
                                              legend.title = element_blank()) +
                                 scale_y_continuous(labels = scales::dollar_format(prefix = "£"))
@@ -196,87 +198,24 @@ server <- function(input, output) {
                 
                 
                 
-                # Send the correct arguments to the plot building function (x axis, y axis, colour)  
-                # Please excuse the extremely ugly irritating nesting if if/else. Unfortunately, else if is not permitted inside the function call
-                # and you cannot set the values (table columns) outside the function call as they are not known in global environment. Note if/elseif not necessary
-                # where the argument to be passed is in quotes. 
+                # Send the correct arguments to the plot building function (x axis, y axis, colour, facet value)
                 buildVariablePlot({
                         if(input$plotType=="scatter") {
-                                yval=SpendingPer100k
+                                yval="SpendingPer100k"
                         } 
                         else { 
-                                yval=ITEMVALUE
+                                yval="ITEMVALUE"
                         }
-                }, {
-                        if(input$xAxisChoice=="supportOrCareType"){
-                                xval = supportOrCareType
-                        }
-                        else {
-                                {
-                                        if(input$xAxisChoice=="CareType_Key") {
-                                                xval=CareType_Key
-                                        }
-                                        else {
-                                                {
-                                                        if(input$xAxisChoice=="PrimarySupportReason_Key") {
-                                                                xval=PrimarySupportReason_Key
-                                                        }
-                                                        else {
-                                                                if(input$xAxisChoice=="AgeBand_Key") {
-                                                                        xval=AgeBand_Key
-                                                                }
-                                                                else {
-                                                                        xval=GEOGRAPHY_NAME        
-                                                                }        
-                                                        }
-                                                        
-                                                }         
-                                                
-                                        }
-                                        
-                                }         
-                        }
-                } ,
-                {
-                        if(input$colorValue=="Age Band"){                
-                                colval = AgeBand_Key
-                        }
-                        else {
-                                {
-                                        if(input$colorValue=="Region") {
-                                                colval=GEOGRAPHY_NAME
-                                        }
-                                        else {
-                                                {
-                                                        if(input$colorValue=="Care Type (short/long term)") {
-                                                                colval=CareType_Key
-                                                        }
-                                                        else {
-                                                                {
-                                                                        if(input$colorValue=="Primary Support Reason") {
-                                                                                colval=PrimarySupportReason_Key
-                                                                        }
-                                                                        else {
-                                                                                colval = supportOrCareType      
-                                                                        }
-                                                                        
-                                                                }         
-                                                                
-                                                        }
-                                                        
-                                                }         
-                                                
-                                        }
-                                        
-                                }         
-                                
-                        }
-                },
-                facetVal = input$facetValue
+                }, 
+                        xval = input$xAxisChoice,
+
+                        colval = input$colorValue,
+                        
+                        facetVal = input$facetValue
                 )
         })
         
-        # Define the table that we are going to render according the inputs        
+        # This reactive table defines the table that we are going to render according the user inputs        
         tableToRender <- reactive({
                 
                 # Define the function that will take the arguments
@@ -284,7 +223,7 @@ server <- function(input, output) {
                         
                         
                         # Tell the table whether we are looking at the total or aggregate data
-                        # 
+                        
                         if(input$plotType=="scatter"){
                                 relevantVal <- "SpendingPer100k"
                         }
@@ -320,8 +259,8 @@ server <- function(input, output) {
                                 # Calculate median
                                 summaryTable <-  (dcast(spendPerPersonData, as.formula(paste(vertical, horizontal, sep="~")), value.var = relevantVal, median, na.rm=TRUE))
                                 
-                                # A problem with calculating the row and column medians so I have taken it out for now -
-                                # Not sure how useful it is anyway
+                                # A slight bug appeared with calculating the row and column medians so I have taken it out for now -
+                                # Not sure how useful it is anyway - who cares about the median of medians of a random row?
                                 
                                 # Add row median
                                 # summaryTable[["RowMedians"]] <- apply(summaryTable[-1], 1, median, na.rm = TRUE)
@@ -423,7 +362,8 @@ server <- function(input, output) {
                 }
         )
         
-        # Text below the main plot - I have just put html inside R's withTags function,
+        # This is literally just the static text below the main plot 
+        # I have just put html tags with brackets inside R's withTags function,
         # rather than writing R functions to be convertd into html
         output$noteText <- renderUI({withTags({
                 
@@ -444,7 +384,7 @@ server <- function(input, output) {
                 })
         })
         
-        # Table Note
+        # Table Note 
         tableNoteOutput <- reactive({
                 
                 # Tell the user whether we are looking at the total or aggregate data
@@ -464,30 +404,21 @@ server <- function(input, output) {
                 
         })
         
-        
+        # Static note about how it works
         output$suppNote <- renderText("Note: To change table source change Plot/Table type. Only selected Primary Support Reasons are broken down by support setting, so filtering by PSR by Support Setting will produce some NAs. Tables can be exported as CSV by clicking the download button beneath the table."                         )
         
         output$tableNote <- renderText({
                 
                 
                                 tableNoteOutput()
-                        
-                        
-                        
-                        
-                
-                
-                
-                
-                
                 
         })        
         
                 
-        # About section 
+        # About section - just displays the markdown file
         output$outputUI <- renderUI({ 
                         
-                        
+
                         includeMarkdown("include.md")
             
             
